@@ -1,0 +1,833 @@
+﻿<!doctype html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rat Genetics Lab Simulation</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/_sdk/element_sdk.js"></script>
+<script src="/_sdk/data_sdk.js"></script>
+<link href="https://fonts.googleapis.com/css2?
+family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body {
+box-sizing: border-box;
+}
+* {
+font-family: 'Nunito', sans-serif;
+}
+.rat-icon {
+transition: transform 0.3s ease;
+}
+.rat-icon:hover {
+transform: scale(1.1);
+}
+.allele-r {
+background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+.allele-g {
+background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+.punnett-cell {
+cursor: pointer;
+transition: all 0.2s ease;
+min-height: 60px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.punnett-cell:hover {
+transform: scale(1.05);
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.punnett-cell.empty {
+border: 2px dashed #06b6d4;
+background: #1e293b;
+}punnett-cell.correct {
+border: 2px solid #22c55e;
+background: #14532d;
+}
+.punnett-cell.incorrect {
+border: 2px solid #ef4444;
+background: #7f1d1d;
+}
+.generation-card {
+animation: fadeIn 0.5s ease-out;
+}
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(20px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.poison-overlay {
+background: repeating-linear-gradient(
+45deg,
+transparent,
+transparent 10px,
+rgba(139, 92, 246, 0.1) 10px,
+rgba(139, 92, 246, 0.1) 20px
+);
+}
+.skull-icon {
+animation: pulse 2s infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.5; }
+}
+</style>
+<style>@view-transition { navigation: auto; }</style>
+</head>
+<body class="h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
+text-white overflow-auto">
+<div id="app" class="min-h-full w-full p-4 md:p-6"><!-- Header -->
+<header class="text-center mb-6">
+<h1 id="main-title" class="text-3xl md:text-4xl font-extrabold bg-gradient-to-r
+from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">🐀Rat
+Genetics Lab Simulation</h1>
+<p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto">Trace
+mutations through generations and observe natural selection with poison
+resistance</p>
+</header><!-- Legend -->
+<div class="flex flex-wrap justify-center gap-4 mb-6 text-sm">
+<div class="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full">
+<span class="w-6 h-6 rounded-full allele-r"></span> <span>R = Normal
+Allele</span>
+</div>
+<div class="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full">
+<span class="w-6 h-6 rounded-full allele-g"></span> <span>G = Mutated Allele
+(Poison Resistant)</span>
+</div>
+<div class="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full">
+<span class="text-xl">☠️</span> <span>Dies from Poison</span>
+</div>
+<div class="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full">
+<span class="text-xl">✅</span> <span>Survives Poison</span>
+</div>
+</div><!-- Name Entry Screen -->
+<div id="name-entry" class="max-w-md mx-auto bg-slate-800/50 rounded-2xl p-
+8 border border-cyan-500">
+<h2 class="text-2xl font-bold text-cyan-400 mb-4 text-center">‍Student
+Information</h2>
+<p class="text-slate-300 mb-6 text-center">Enter your name to begin the
+genetics lab simulation</p><label for="student-name" class="block text-sm font-
+bold text-slate-300 mb-2">Your Name:</label> <input type="text" id="student-
+name" class="w-full px-4 py-3 rounded-xl bg-slate-700 text-white border border-
+slate-600 focus:border-cyan-400 focus:outline-none mb-4" placeholder="Enter
+your full name"> <button id="start-lab-btn" class="w-full bg-gradient-to-r from-
+emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white
+font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 shadow-
+lg">🧬Start Lab Simulation </button>
+</div><!-- Main Content -->
+<div id="lab-content" class="hidden max-w-7xl mx-auto"><!-- Instructions Panel
+-->
+<div id="instructions-panel" class="bg-slate-800/50 rounded-2xl p-5 mb-6
+border border-slate-700">
+<h2 class="text-xl font-bold text-cyan-400 mb-3 flex items-center gap-2">
+<span>📋</span> How to Use This Simulation</h2>
+<ol class="text-slate-300 space-y-2 text-sm list-decimal list-inside">
+<li><strong>Generation 1:</strong> Start with 4 rats - 3 with RR (normal) and 1
+with RG (mutated)</li>
+<li><strong>Click "Breed Next Generation"</strong> to see Punnett squares
+and create offspring</li>
+<li><strong>Generations 1-2:</strong> No poison - all rats survive</li>
+<li><strong>After Generation 3:</strong> Poison is introduced! When you click
+breed, Gen 3 rats are exposed to poison first</li>
+<li><strong>Only survivors breed:</strong> Only rats with at least one G allele
+(RG or GG) survive and reproduce for Generations 4-5</li>
+<li>Watch how natural selection dramatically increases the mutation
+frequency!</li>
+</ol>
+</div><!-- Simulation Area -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><!-- Data Table 1: No Poison -->
+<div class="bg-slate-800/30 rounded-2xl p-5 border border-slate-700">
+<h2 class="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+<span>🌿</span> Table 1: Environment WITHOUT Poison</h2>
+<div id="table1-container" class="space-y-4"><!-- Generations 1-3 will be
+rendered here -->
+</div>
+</div><!-- Data Table 2: With Poison -->
+<div class="bg-slate-800/30 rounded-2xl p-5 border border-purple-700/50
+relative overflow-hidden">
+<div class="poison-overlay absolute inset-0 pointer-events-none"></div>
+<h2 class="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2
+relative z-10"><span class="skull-icon">☠️</span> Table 2: Environment WITH
+Poison</h2>
+<div id="table2-container" class="space-y-4 relative z-10"><!-- Generations 4-5
+will be rendered here -->
+</div>
+</div>
+</div><!-- Interactive Punnett Square Area -->
+<div id="punnett-area" class="hidden bg-slate-800/30 rounded-2xl p-5 mb-6
+border border-cyan-500">
+<h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
+<span>🔬</span> Fill in the Punnett Squares</h2>
+<p class="text-slate-400 text-sm mb-4">Click on each empty cell to select the
+alleles. Each pair produces 4 offspring.</p>
+<div id="punnett-grids" class="space-y-6"><!-- Punnett squares will be
+generated here -->
+</div><button id="check-punnett-btn" class="mt-4 w-full bg-gradient-to-r from-
+emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white
+font-bold py-3 px-6 rounded-xl transition-all"> ✓ Check My Answers </button>
+</div><!-- Quiz Area (appears between Gen 3 and 4) -->
+<div id="quiz-area" class="hidden bg-slate-800/30 rounded-2xl p-5 mb-6 border
+border-purple-500">
+<h2 class="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2">
+<span class="skull-icon">☠️</span> Poison Introduction - Quiz</h2>
+<p class="text-slate-300 mb-6">Before introducing poison to Generation 3,
+answer these questions:</p>
+<div class="space-y-6"><!-- Question 1 -->
+<div class="bg-slate-700/50 rounded-xl p-4">
+<p class="font-bold text-white mb-3">1. Which rats will survive the poison?
+</p>
+<div class="space-y-2"><label class="flex items-center gap-3 cursor-pointer p-
+2 rounded hover:bg-slate-600/50"> <input type="radio" name="q1" value="a"
+class="w-4 h-4"> <span>Only rats with RR genotype</span> </label> <label
+class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-slate-
+600/50"> <input type="radio" name="q1" value="b" class="w-4 h-4"> <span>Rats
+with at least one G allele (RG or GG)</span> </label> <label class="flex items-
+center gap-3 cursor-pointer p-2 rounded hover:bg-slate-600/50"> <input
+type="radio" name="q1" value="c" class="w-4 h-4"> <span>Only rats with GG
+genotype</span> </label> <label class="flex items-center gap-3 cursor-pointer p-
+2 rounded hover:bg-slate-600/50"> <input type="radio" name="q1" value="d"
+class="w-4 h-4"> <span>All rats will survive</span> </label>
+</div>
+</div><!-- Question 2 -->
+<div class="bg-slate-700/50 rounded-xl p-4">
+<p class="font-bold text-white mb-3">2. What will happen to the G allele
+frequency after the poison is introduced?</p>
+<div class="space-y-2"><label class="flex items-center gap-3 cursor-pointer p-
+2 rounded hover:bg-slate-600/50"> <input type="radio" name="q2" value="a"
+class="w-4 h-4"> <span>It will decrease significantly</span> </label> <label
+class="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-slate-
+600/50"> <input type="radio" name="q2" value="b" class="w-4 h-4"> <span>It will
+increase significantly</span> </label> <label class="flex items-center gap-3
+cursor-pointer p-2 rounded hover:bg-slate-600/50"> <input type="radio"
+name="q2" value="c" class="w-4 h-4"> <span>It will stay the same</span>
+</label> <label class="flex items-center gap-3 cursor-pointer p-2 rounded
+hover:bg-slate-600/50"> <input type="radio" name="q2" value="d" class="w-4 h-
+4"> <span>It will disappear completely</span> </label>
+</div>
+</div><!-- Question 3 -->
+<div class="bg-slate-700/50 rounded-xl p-4">
+<p class="font-bold text-white mb-3">3. This is an example of:</p>
+<div class="space-y-2"><label class="flex items-center gap-3 cursor-pointer p-
+2 rounded hover:bg-slate-600/50"> <input type="radio" name="q3" value="a"
+class="w-4 h-4"> <span>Random genetic drift</span> </label> <label class="flex
+items-center gap-3 cursor-pointer p-2 rounded hover:bg-slate-600/50"> <input
+type="radio" name="q3" value="b" class="w-4 h-4"> <span>Natural
+selection</span> </label> <label class="flex items-center gap-3 cursor-pointer p-
+2 rounded hover:bg-slate-600/50"> <input type="radio" name="q3" value="c"
+class="w-4 h-4"> <span>Gene flow</span> </label> <label class="flex items-
+center gap-3 cursor-pointer p-2 rounded hover:bg-slate-600/50"> <input
+type="radio" name="q3" value="d" class="w-4 h-4"> <span>Mutation</span>
+</label>
+</div>
+</div>
+</div><button id="submit-quiz-btn" class="mt-6 w-full bg-gradient-to-r from-
+purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-
+bold py-3 px-6 rounded-xl transition-all"> Submit Quiz &amp; Introduce Poison
+</button>
+<div id="quiz-feedback" class="hidden mt-4 p-4 rounded-xl"></div>
+</div><!-- Controls -->
+<div class="flex flex-wrap justify-center gap-4 mt-6"><button id="breed-btn"
+class="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600
+hover:to-cyan-600 text-white font-bold py-3 px-6 rounded-xl transition-all
+transform hover:scale-105 shadow-lg">🧬Start Breeding </button> <button
+id="reset-btn" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3
+px-6 rounded-xl transition-all"> ��� Reset Simulation </button>
+</div><!-- Stats Panel -->
+<div class="mt-6 bg-slate-800/50 rounded-2xl p-5 border border-slate-700">
+<h3 class="text-lg font-bold text-cyan-400 mb-3">📈Population Statistics</h3>
+<div id="stats-panel" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+<!-- Stats will be rendered here -->
+</div>
+</div>
+</div>
+</div>
+<script>
+// Default configuration
+const defaultConfig = {
+title: 'Rat Genetics Lab Simulation'
+};
+// Game state
+let gameState = {
+studentName: '',
+currentGeneration: 1,
+generations: [],
+currentPairs: [],
+punnettAnswers: [],
+quizAnswers: {},
+poisonStartGeneration: 4,
+awaitingPunnett: false,
+awaitingQuiz: false
+};
+let dataRecords = [];
+// Data SDK handler
+const dataHandler = {
+onDataChanged(data) {
+dataRecords = data;
+}
+};
+// Initialize generation 1
+function initializeGame() {
+gameState = {
+studentName: '',
+currentGeneration: 1,
+generations: [{
+number: 1,
+rats: [
+{ id: 1, allele1: 'R', allele2: 'R', alive: true },
+{ id: 2, allele1: 'R', allele2: 'R', alive: true },
+{ id: 3, allele1: 'R', allele2: 'R', alive: true },
+{ id: 4, allele1: 'R', allele2: 'G', alive: true }
+],
+hasPoison: false
+}],
+currentPairs: [],
+punnettAnswers: [],
+quizAnswers: {},
+poisonStartGeneration: 4,
+awaitingPunnett: false,
+awaitingQuiz: false
+};
+document.getElementById('name-entry').classList.remove('hidden');
+document.getElementById('lab-content').classList.add('hidden');
+document.getElementById('student-name').value = '';
+}
+// Start lab with student name
+function startLab() {
+const nameInput = document.getElementById('student-name');
+const name = nameInput.value.trim();
+if (!name) {
+showMessage('Please enter your name to begin the lab.');
+return;
+}
+gameState.studentName = name;
+document.getElementById('name-entry').classList.add('hidden');
+document.getElementById('lab-content').classList.remove('hidden');
+renderAll();
+}
+// Get genotype string
+function getGenotype(rat) {
+const alleles = [rat.allele1, rat.allele2].sort().reverse();
+return alleles.join('');
+}
+// Check if rat survives poison
+function survivesPoison(rat) {
+return rat.allele1 === 'G' || rat.allele2 === 'G';
+}
+// Breed next generation - now interactive!
+function breedNextGeneration() {
+const currentGen = gameState.generations[gameState.currentGeneration - 1];
+// Check if we need to show quiz (after gen 3, before breeding)
+if (gameState.currentGeneration === 3 && !gameState.awaitingQuiz &&
+!currentGen.hasPoison) {
+gameState.awaitingQuiz = true;
+showQuiz();
+return;
+}
+const livingRats = currentGen.rats.filter(r => r.alive);
+if (livingRats.length < 2) {
+showMessage('Not enough rats to breed! Simulation ended.');
+return;
+}
+if (gameState.currentGeneration >= 5) {
+showMessage('Simulation complete! You can reset to start over.');
+return;
+}
+// Create random pairs
+const shuffled = [...livingRats].sort(() => Math.random() - 0.5);
+const pairs = [];
+for (let i = 0; i < shuffled.length - 1; i += 2) {
+pairs.push([shuffled[i], shuffled[i + 1]]);
+}
+gameState.currentPairs = pairs;
+gameState.punnettAnswers = [];
+gameState.awaitingPunnett = true;
+document.getElementById('breed-btn').classList.add('hidden');
+showPunnettSquares();
+}
+// Show Punnett squares for students to fill
+function showPunnettSquares() {
+const area = document.getElementById('punnett-area');
+const gridsContainer = document.getElementById('punnett-grids');
+gridsContainer.innerHTML = gameState.currentPairs.map((pair, pairIndex) => {
+const p1 = pair[0];
+const p2 = pair[1];
+return `
+<div class="bg-slate-700/50 rounded-xl p-4">
+<div class="text-sm text-slate-400 mb-3">
+Pair ${pairIndex + 1}: ${getGenotype(p1)} × ${getGenotype(p2)}
+</div>
+<div class="grid grid-cols-3 gap-2 max-w-md mx-auto">
+<div class="bg-slate-600 p-3 rounded text-center font-bold">×</div>
+<div class="bg-slate-600 p-3 rounded text-center font-bold ${p2.allele1 ===
+'G' ? 'text-green-400' : 'text-red-400'}">${p2.allele1}</div>
+<div class="bg-slate-600 p-3 rounded text-center font-bold ${p2.allele2 ===
+'G' ? 'text-green-400' : 'text-red-400'}">${p2.allele2}</div>
+<div class="bg-slate-600 p-3 rounded text-center font-bold ${p1.allele1 ===
+'G' ? 'text-green-400' : 'text-red-400'}">${p1.allele1}</div>
+<div class="punnett-cell empty" data-pair="${pairIndex}" data-cell="0"
+data-correct="${p1.allele1}${p2.allele1}"
+onclick="selectAlleles(${pairIndex}, 0, '${p1.allele1}', '${p2.allele1}')">
+<span class="text-slate-500 text-sm">Click to fill</span>
+</div>
+<div class="punnett-cell empty" data-pair="${pairIndex}" data-cell="1"
+data-correct="${p1.allele1}${p2.allele2}"
+onclick="selectAlleles(${pairIndex}, 1, '${p1.allele1}', '${p2.allele2}')">
+<span class="text-slate-500 text-sm">Click to fill</span>
+</div>
+<div class="bg-slate-600 p-3 rounded text-center font-bold ${p1.allele2 ===
+'G' ? 'text-green-400' : 'text-red-400'}">${p1.allele2}</div>
+<div class="punnett-cell empty" data-pair="${pairIndex}" data-cell="2"
+data-correct="${p1.allele2}${p2.allele1}"
+onclick="selectAlleles(${pairIndex}, 2, '${p1.allele2}', '${p2.allele1}')">
+<span class="text-slate-500 text-sm">Click to fill</span>
+</div>
+<div class="punnett-cell empty" data-pair="${pairIndex}" data-cell="3"
+data-correct="${p1.allele2}${p2.allele2}"
+onclick="selectAlleles(${pairIndex}, 3, '${p1.allele2}', '${p2.allele2}')">
+<span class="text-slate-500 text-sm">Click to fill</span>
+</div>
+</div>
+</div>
+`;
+}).join('');
+area.classList.remove('hidden');
+}
+// Select alleles for a cell
+window.selectAlleles = function(pairIndex, cellIndex, correctA1, correctA2) {
+const cell = document.querySelector(`[data-pair="${pairIndex}"][data-
+cell="${cellIndex}"]`);
+// Remove empty class
+cell.classList.remove('empty');
+const selector = document.createElement('div');
+selector.className = 'flex gap-2 justify-center';
+selector.innerHTML = `
+<button class="allele-btn bg-red-600 hover:bg-red-500 px-3 py-1 rounded text-
+sm font-bold" data-allele="R">R</button>
+<button class="allele-btn bg-green-600 hover:bg-green-500 px-3 py-1 rounded
+text-sm font-bold" data-allele="G">G</button>
+`;
+const buttons = selector.querySelectorAll('.allele-btn');
+let selectedAlleles = [];
+buttons.forEach(btn => {
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+selectedAlleles.push(btn.dataset.allele);
+if (selectedAlleles.length === 2) {
+const a1Color = selectedAlleles[0] === 'G' ? 'text-green-400' : 'text-red-400';
+const a2Color = selectedAlleles[1] === 'G' ? 'text-green-400' : 'text-red-400';
+cell.innerHTML = `
+<span class="${a1Color} font-bold">${selectedAlleles[0]}</span>
+<span class="${a2Color} font-bold">${selectedAlleles[1]}</span>
+`;
+// Store answer
+if (!gameState.punnettAnswers[pairIndex]) {
+gameState.punnettAnswers[pairIndex] = [];
+}
+gameState.punnettAnswers[pairIndex][cellIndex] = {
+student: selectedAlleles,
+correct: [correctA1, correctA2]
+};
+}
+});
+});
+cell.innerHTML = '';
+cell.appendChild(selector);
+};
+// Check Punnett answers
+function checkPunnettAnswers() {
+let allFilled = true;
+let allCorrect = true;
+for (let i = 0; i < gameState.currentPairs.length; i++) {
+if (!gameState.punnettAnswers[i] || gameState.punnettAnswers[i].length !== 4)
+{
+allFilled = false;
+break;
+}
+for (let j = 0; j < 4; j++) {
+const answer = gameState.punnettAnswers[i][j];
+if (!answer) {
+allFilled = false;
+break;
+}
+const correct = answer.correct.sort().join('') === answer.student.sort().join('');
+if (!correct) {
+allCorrect = false;
+}
+const cell = document.querySelector(`[data-pair="${i}"][data-cell="${j}"]`);
+cell.classList.remove('empty');
+if (correct) {
+cell.classList.add('correct');
+cell.classList.remove('incorrect');
+} else {
+cell.classList.add('incorrect');
+cell.classList.remove('correct');
+}
+}
+}
+if (!allFilled) {
+showMessage('Please fill in all Punnett square cells before checking.');
+return;
+}
+if (allCorrect) {
+showMessage('Perfect! All Punnett squares are correct. Creating next
+generation...');
+setTimeout(() => {
+createNextGeneration();
+}, 2000);
+} else {
+showMessage('Some cells are incorrect (shown in red). Try again!');
+}
+}
+// Create next generation from Punnett results
+function createNextGeneration() {
+const newRats = [];
+let ratId = 1;
+for (let i = 0; i < gameState.currentPairs.length; i++) {
+for (let j = 0; j < 4; j++) {
+const answer = gameState.punnettAnswers[i][j];
+newRats.push({
+id: ratId++,
+allele1: answer.correct[0],
+allele2: answer.correct[1],
+alive: true
+});
+}
+}
+const nextGenNumber = gameState.currentGeneration + 1;
+const hasPoison = nextGenNumber >= gameState.poisonStartGeneration;
+if (hasPoison) {
+for (const rat of newRats) {
+rat.alive = survivesPoison(rat);
+}
+}
+gameState.generations.push({
+number: nextGenNumber,
+rats: newRats,
+hasPoison: hasPoison
+});
+gameState.currentGeneration = nextGenNumber;
+gameState.awaitingPunnett = false;
+// Save generation data to sheet
+await saveGenerationData();
+document.getElementById('punnett-area').classList.add('hidden');
+document.getElementById('breed-btn').classList.remove('hidden');
+renderAll();
+}
+// Save generation data to Canva Sheet
+async function saveGenerationData() {
+if (!window.dataSdk) return;
+const currentGen = gameState.generations[gameState.currentGeneration - 1];
+const counts = { RR: 0, RG: 0, GG: 0, alive: 0, dead: 0 };
+for (const rat of currentGen.rats) {
+const genotype = getGenotype(rat);
+counts[genotype]++;
+if (rat.alive) counts.alive++;
+else counts.dead++;
+}
+const quizScore = currentGen.number === 4 && gameState.quizAnswers.q1 ?
+[gameState.quizAnswers.q1 === 'b' ? 1 : 0,
+gameState.quizAnswers.q2 === 'b' ? 1 : 0,
+gameState.quizAnswers.q3 === 'b' ? 1 : 0].reduce((a, b) => a + b, 0) : 0;
+const record = {
+student_name: gameState.studentName,
+generation: currentGen.number,
+rr_count: counts.RR,
+rg_count: counts.RG,
+gg_count: counts.GG,
+survived_count: counts.alive,
+died_count: counts.dead,
+quiz_score: quizScore,
+timestamp: new Date().toISOString()
+};
+const result = await window.dataSdk.create(record);
+if (!result.isOk) {
+console.error('Failed to save data');
+}
+}
+// Show quiz
+function showQuiz() {
+document.getElementById('breed-btn').classList.add('hidden');
+document.getElementById('quiz-area').classList.remove('hidden');
+showMessage('Answer the quiz questions before introducing poison!');
+}
+// Submit quiz
+function submitQuiz() {
+const q1 = document.querySelector('input[name="q1"]:checked');
+const q2 = document.querySelector('input[name="q2"]:checked');
+const q3 = document.querySelector('input[name="q3"]:checked');
+if (!q1 || !q2 || !q3) {
+showMessage('Please answer all questions before submitting.');
+return;
+}
+gameState.quizAnswers = {
+q1: q1.value,
+q2: q2.value,
+q3: q3.value
+};
+// Correct answers: b, b, b
+const score = [
+q1.value === 'b' ? 1 : 0,
+q2.value === 'b' ? 1 : 0,
+q3.value === 'b' ? 1 : 0
+].reduce((a, b) => a + b, 0);
+const feedback = document.getElementById('quiz-feedback');
+feedback.classList.remove('hidden');
+if (score === 3) {
+feedback.className = 'mt-4 p-4 rounded-xl bg-green-900/50 border border-
+green-500';
+feedback.innerHTML = `
+<p class="font-bold text-green-400">Perfect! 3/3 correct!🎉</p>
+<p class="text-sm text-slate-300 mt-2">You understand natural selection!
+Now introducing poison to Generation 3...</p>
+`;
+} else {
+feedback.className = 'mt-4 p-4 rounded-xl bg-yellow-900/50 border border-
+yellow-500';
+feedback.innerHTML = `
+<p class="font-bold text-yellow-400">Score: ${score}/3</p>
+<p class="text-sm text-slate-300 mt-2">Correct answers: Rats with at least
+one G survive; frequency increases; this is natural selection.</p>
+<p class="text-sm text-slate-300 mt-2">Introducing poison now...</p>
+`;
+}
+// Apply poison to Gen 3
+setTimeout(() => {
+applyPoisonToGen3();
+document.getElementById('quiz-area').classList.add('hidden');
+document.getElementById('breed-btn').classList.remove('hidden');
+gameState.awaitingQuiz = false;
+}, 3000);
+}
+// Apply poison to generation 3
+function applyPoisonToGen3() {
+const gen3 = gameState.generations[2];
+for (const rat of gen3.rats) {
+rat.alive = survivesPoison(rat);
+}
+gen3.hasPoison = true;
+const survivors = gen3.rats.filter(r => r.alive).length;
+showMessage(`Poison applied! ${survivors} rats survived in Generation 3.`);
+renderAll();
+}
+// Render a single rat
+function renderRat(rat, showSurvival = false) {
+const genotype = getGenotype(rat);
+let bgClass = 'bg-slate-700';
+if (genotype === 'RR') bgClass = 'bg-gradient-to-br from-red-600 to-red-700';
+else if (genotype === 'RG') bgClass = 'bg-gradient-to-br from-red-500 to-green-
+500';
+else if (genotype === 'GG') bgClass = 'bg-gradient-to-br from-green-600 to-
+green-700';
+const statusIcon = showSurvival ? (rat.alive ? '✅' : '☠️') : '';
+const opacityClass = !rat.alive && showSurvival ? 'opacity-50' : '';
+return `
+<div class="rat-icon ${bgClass} ${opacityClass} rounded-xl p-3 text-center
+min-w-[70px] shadow-lg border border-white/10">
+<div class="text-2xl mb-1">🐀</div>
+<div class="font-bold text-sm">${genotype}</div>
+${statusIcon ? `<div class="text-lg mt-1">${statusIcon}</div>` : ''}
+</div>
+`;
+}
+// Render a generation
+function renderGeneration(gen, container) {
+const counts = {
+RR: 0, RG: 0, GG: 0,
+alive: 0, dead: 0
+};
+for (const rat of gen.rats) {
+const genotype = getGenotype(rat);
+counts[genotype]++;
+if (rat.alive) counts.alive++;
+else counts.dead++;
+}
+const html = `
+<div class="generation-card bg-slate-900/50 rounded-xl p-4 border
+${gen.hasPoison ? 'border-purple-500/50' : 'border-slate-600'}">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-bold text-lg ${gen.hasPoison ? 'text-purple-400' : 'text-
+emerald-400'}">
+Generation ${gen.number}
+${gen.hasPoison ? '<span class="text-sm ml-2">☠️Poison Active</span>' :
+''}
+</h3>
+<span class="text-sm text-slate-400">Total: ${gen.rats.length} rats</span>
+</div>
+<div class="flex flex-wrap gap-2 mb-3 justify-center">
+${gen.rats.map(rat => renderRat(rat, gen.hasPoison)).join('')}
+</div>
+<div class="grid grid-cols-3 gap-2 text-xs mt-3 pt-3 border-t border-slate-
+700">
+<div class="text-center">
+<div class="text-red-400 font-bold">${counts.RR}</div>
+<div class="text-slate-500">RR</div>
+</div>
+<div class="text-center">
+<div class="text-yellow-400 font-bold">${counts.RG}</div>
+<div class="text-slate-500">RG</div>
+</div>
+<div class="text-center">
+<div class="text-green-400 font-bold">${counts.GG}</div>
+<div class="text-slate-500">GG</div>
+</div>
+</div>
+${gen.hasPoison ? `
+<div class="mt-2 pt-2 border-t border-slate-700 text-xs text-center">
+<span class="text-green-400">✅Survived: ${counts.alive}</span>
+<span class="mx-2">|</span>
+<span class="text-red-400">☠️Died: ${counts.dead}</span>
+</div>
+` : ''}
+</div>
+`;
+container.insertAdjacentHTML('beforeend', html);
+}
+// Render stats
+function renderStats() {
+const statsPanel = document.getElementById('stats-panel');
+const currentGen = gameState.generations[gameState.currentGeneration - 1];
+let totalRR = 0, totalRG = 0, totalGG = 0, totalAlive = 0;
+for (const rat of currentGen.rats) {
+const genotype = getGenotype(rat);
+if (genotype === 'RR') totalRR++;
+else if (genotype === 'RG') totalRG++;
+else if (genotype === 'GG') totalGG++;
+if (rat.alive) totalAlive++;
+}
+const mutationFrequency = ((totalRG + totalGG * 2) / (currentGen.rats.length *
+2) * 100).toFixed(1);
+statsPanel.innerHTML = `
+<div class="bg-slate-700/50 rounded-xl p-3">
+<div class="text-2xl font-bold text-cyan-
+400">${gameState.currentGeneration}</div>
+<div class="text-xs text-slate-400">Current Generation</div>
+</div>
+<div class="bg-slate-700/50 rounded-xl p-3">
+<div class="text-2xl font-bold text-emerald-400">${totalAlive}</div>
+<div class="text-xs text-slate-400">Living Rats</div>
+</div>
+<div class="bg-slate-700/50 rounded-xl p-3">
+<div class="text-2xl font-bold text-yellow-400">${mutationFrequency}%</div>
+<div class="text-xs text-slate-400">G Allele Frequency</div>
+</div>
+<div class="bg-slate-700/50 rounded-xl p-3">
+<div class="text-2xl font-bold ${gameState.currentGeneration >= 4 ? 'text-
+purple-400' : 'text-slate-500'}">
+${gameState.currentGeneration >= 4 ? 'ACTIVE' : 'Gen 4+'}
+</div>
+<div class="text-xs text-slate-400">Poison Status</div>
+</div>
+`;
+}
+// Render all
+function renderAll() {
+const table1 = document.getElementById('table1-container');
+const table2 = document.getElementById('table2-container');
+table1.innerHTML = '';
+table2.innerHTML = '';
+for (const gen of gameState.generations) {
+if (gen.number <= 3) {
+renderGeneration(gen, table1);
+} else {
+renderGeneration(gen, table2);
+}
+}
+// Show placeholder for Table 2 if no generations yet
+if (!gameState.generations.some(g => g.number >= 4)) {
+table2.innerHTML = `
+<div class="text-center text-slate-500 py-8">
+<p class="text-lg">🧬Complete Generation 3 first</p>
+<p class="text-sm mt-2">Generation 4 will start here with poison active</p>
+</div>
+`;
+}
+renderStats();
+// Update button state
+const breedBtn = document.getElementById('breed-btn');
+if (gameState.currentGeneration >= 5) {
+breedBtn.disabled = true;
+breedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+} else {
+breedBtn.disabled = false;
+breedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+}
+}
+// Show message (inline instead of alert)
+function showMessage(msg) {
+const existing = document.querySelector('.toast-message');
+if (existing) existing.remove();
+const toast = document.createElement('div');
+toast.className = 'toast-message fixed top-4 left-1/2 transform -translate-x-
+1/2 bg-slate-700 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-pulse';
+toast.textContent = msg;
+document.body.appendChild(toast);
+setTimeout(() => toast.remove(), 3000);
+}
+// Event listeners
+document.getElementById('start-lab-btn').addEventListener('click', startLab);
+document.getElementById('breed-btn').addEventListener('click',
+breedNextGeneration);
+document.getElementById('check-punnett-btn').addEventListener('click',
+checkPunnettAnswers);
+document.getElementById('submit-quiz-btn').addEventListener('click',
+submitQuiz);
+document.getElementById('reset-btn').addEventListener('click', initializeGame);
+// Element SDK integration
+function onConfigChange(config) {
+const title = config.title || defaultConfig.title;
+document.getElementById('main-title').innerHTML = `🐀${title}`;
+document.title = title;
+}
+function mapToCapabilities(config) {
+return {
+recolorables: [],
+borderables: [],
+fontEditable: undefined,
+fontSizeable: undefined
+};
+}
+function mapToEditPanelValues(config) {
+return new Map([
+['title', config.title || defaultConfig.title]
+]);
+}
+// Initialize
+async function init() {
+if (window.dataSdk) {
+const result = await window.dataSdk.init(dataHandler);
+if (!result.isOk) {
+console.error('Failed to initialize data SDK');
+}
+}
+if (window.elementSdk) {
+window.elementSdk.init({
+defaultConfig,
+onConfigChange,
+mapToCapabilities,
+mapToEditPanelValues
+});
+}
+initializeGame();
+}
+init();
+</script>
+<script>(function(){function c(){var
+b=a.contentDocument||a.contentWindow.document;if(b){var
+d=b.createElement('script');d.innerHTML="window.__CF$cv$params=
+{r:'9c0a32fae4a169c6',t:'MTc2ODg2NjI1Ny4wMDAwMDA='};var
+a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-
+platform/scripts/jsd/main.js';document.getElementsByTagName('head')
+[0].appendChild(a);";b.getElementsByTagName('head')
+[0].appendChild(d)}}if(document.body){var
+a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absol
+ute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';do
+cument.body.appendChild(a);if('loading'!==document.readyState)c();else
+if(window.addEventListener)document.addEventListener('DOMContentLoaded',c)
+;else{var e=document.onreadystatechange||function()
+{};document.onreadystatechange=function(b)
+{e(b);'loading'!==document.readyState&&
+(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
